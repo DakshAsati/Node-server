@@ -5,27 +5,35 @@ const jwt = require("jsonwebtoken");
 const User = require("../Models/user.js");
 const router = express.Router();
 
-
 const verifyToken = require("../middleware/Verifytoken.js");
 
-// Protected route
+// Protected route (example)
 router.get("/profile", verifyToken, (req, res) => {
   res.json({
     message: "Welcome to your profile",
     user: req.user,
   });
-
-  
 });
+
 // Register
 router.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   try {
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+    // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashedPassword });
-    res.status(201).json(user);
+
+    // Send user data (without password) as response
+    const { password: _, ...userData } = user.toObject();
+    res.status(201).json(userData);
   } catch (err) {
-    res.status(400).json({ error: "User already exists or invalid data" });
+    res.status(400).json({ error: "Invalid data" });
   }
 });
 
@@ -45,6 +53,5 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 module.exports = router;
